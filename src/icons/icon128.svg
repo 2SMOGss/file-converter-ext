@@ -1,0 +1,9 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <rect width="128" height="128" rx="20" fill="#4A90E2"/>
+  <rect x="16" y="32" width="96" height="64" rx="8" fill="white"/>
+  <rect x="32" y="48" width="32" height="16" fill="#4A90E2"/>
+  <rect x="32" y="72" width="48" height="8" fill="#4A90E2"/>
+  <circle cx="88" cy="64" r="8" fill="#7ED321"/>
+  <path d="M64 16 L80 32 L48 32 Z" fill="#F5A623"/>
+  <text x="64" y="110" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="white">PRO</text>
+</svg>

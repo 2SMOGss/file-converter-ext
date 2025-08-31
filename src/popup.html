@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>File Converter Pro</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <h1>File Converter Pro</h1>
+      <p class="subtitle">Professional Image Converter</p>
+    </header>
+
+    <!-- File Drop Zone -->
+    <section class="drop-zone" id="dropZone">
+      <div class="drop-content">
+        <div class="drop-icon">📁</div>
+        <h3>Drop files here or click to browse</h3>
+        <p>Supports JPEG, PNG, and Windows system assets</p>
+        <button class="browse-btn" id="browseBtn">Browse Files</button>
+      </div>
+      <input type="file" id="fileInput" multiple accept="image/*,application/octet-stream" style="display: none;">
+    </section>
+
+    <!-- Windows Assets Section -->
+    <section class="assets-section">
+      <button class="assets-btn" id="findAssetsBtn">
+        🖼️ Find Windows Assets
+      </button>
+    </section>
+
+    <!-- File List -->
+    <section class="file-list" id="fileListSection" style="display: none;">
+      <h4>Selected Files</h4>
+      <div class="file-items" id="fileItems"></div>
+      <button class="clear-btn" id="clearBtn">Clear All</button>
+    </section>
+
+    <!-- Conversion Options -->
+    <section class="options-section" id="optionsSection" style="display: none;">
+      <h4>Conversion Options</h4>
+      
+      <!-- Format Selection -->
+      <div class="option-group">
+        <label for="outputFormat">Output Format:</label>
+        <select id="outputFormat">
+          <option value="jpeg">JPEG</option>
+          <option value="png">PNG</option>
+        </select>
+      </div>
+
+      <!-- Size Options -->
+      <div class="option-group">
+        <label>Size Options:</label>
+        <div class="radio-group">
+          <label class="radio-label">
+            <input type="radio" name="sizeOption" value="original" checked>
+            Keep Original Size
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="sizeOption" value="preset">
+            Professional Presets
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="sizeOption" value="custom">
+            Custom Dimensions
+          </label>
+        </div>
+      </div>
+
+      <!-- Preset Selection -->
+      <div class="option-group" id="presetGroup" style="display: none;">
+        <label for="presetSelect">Choose Preset:</label>
+        <select id="presetSelect">
+          <option value="print-quality">Print Quality (4500×5400)</option>
+          <option value="high-quality">High Quality (3000×3600)</option>
+          <option value="standard-print">Standard Print (2400×3000)</option>
+          <option value="web-preview">Web Preview (1800×2400)</option>
+        </select>
+      </div>
+
+      <!-- Custom Dimensions -->
+      <div class="option-group" id="customGroup" style="display: none;">
+        <div class="dimension-inputs">
+          <div class="input-group">
+            <label for="customWidth">Width:</label>
+            <input type="number" id="customWidth" min="100" max="10000" placeholder="4500">
+          </div>
+          <div class="input-group">
+            <label for="customHeight">Height:</label>
+            <input type="number" id="customHeight" min="100" max="10000" placeholder="5400">
+          </div>
+        </div>
+        <label class="checkbox-label">
+          <input type="checkbox" id="maintainAspectRatio" checked>
+          Maintain Aspect Ratio
+        </label>
+      </div>
+
+      <!-- Quality Settings -->
+      <div class="option-group">
+        <label for="qualitySlider">Quality: <span id="qualityValue">80%</span></label>
+        <input type="range" id="qualitySlider" min="10" max="100" value="80" class="slider">
+      </div>
+
+      <!-- DPI Settings -->
+      <div class="option-group">
+        <label for="dpiSelect">DPI (Print Quality):</label>
+        <select id="dpiSelect">
+          <option value="72">72 DPI (Web)</option>
+          <option value="150">150 DPI (Good)</option>
+          <option value="300" selected>300 DPI (Print)</option>
+          <option value="600">600 DPI (High Print)</option>
+        </select>
+      </div>
+    </section>
+
+    <!-- Action Buttons -->
+    <section class="actions-section" id="actionsSection" style="display: none;">
+      <div class="download-info">
+        <p>💾 You'll be prompted to choose where to save each converted file</p>
+      </div>
+      <button class="convert-btn" id="convertBtn">
+        🔄 Convert Files
+      </button>
+    </section>
+
+    <!-- Progress Section -->
+    <section class="progress-section" id="progressSection" style="display: none;">
+      <div class="progress-info">
+        <span id="progressText">Processing...</span>
+        <span id="progressPercent">0%</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+    </section>
+
+    <!-- Results Section -->
+    <section class="results-section" id="resultsSection" style="display: none;">
+      <div class="success-message">
+        <span class="success-icon">✅</span>
+        <span id="successText">Files converted successfully!</span>
+      </div>
+      <button class="new-conversion-btn" id="newConversionBtn">
+        Convert More Files
+      </button>
+    </section>
+
+    <!-- Error Section -->
+    <section class="error-section" id="errorSection" style="display: none;">
+      <div class="error-message">
+        <span class="error-icon">❌</span>
+        <span id="errorText">Error occurred during conversion</span>
+      </div>
+      <button class="retry-btn" id="retryBtn">Try Again</button>
+    </section>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
