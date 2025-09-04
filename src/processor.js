@@ -311,11 +311,19 @@ async function processBatch(conversionData) {
  * Generate output filename based on original name and settings
  */
 function generateOutputFilename(originalName, settings, isWindowsAsset = false) {
+  console.log('🔧 generateOutputFilename called with:', {
+    originalName,
+    settings,
+    isWindowsAsset
+  });
+  
   // Check if this is a Windows asset
   if (isWindowsAsset) {
     // For Windows assets: "image_background.jpg"
     const extension = settings.outputFormat === 'png' ? 'png' : 'jpg';
-    return `image_background.${extension}`;
+    const filename = `image_background.${extension}`;
+    console.log('🖼️ Windows asset filename:', filename);
+    return filename;
   }
   
   // For regular JPEG/PNG files: "image_resolution_DPI.xxx"
@@ -324,11 +332,14 @@ function generateOutputFilename(originalName, settings, isWindowsAsset = false) 
   if (settings.preset && PRINT_PRESETS[settings.preset]) {
     const preset = PRINT_PRESETS[settings.preset];
     resolution = `${preset.width}x${preset.height}`;
+    console.log('📐 Using preset resolution:', resolution);
   } else if (settings.customWidth && settings.customHeight) {
     resolution = `${settings.customWidth}x${settings.customHeight}`;
+    console.log('📐 Using custom resolution:', resolution);
   } else {
     // Fallback to original dimensions if available
     resolution = 'original';
+    console.log('📐 Using original resolution');
   }
   
   // Add DPI
@@ -337,7 +348,9 @@ function generateOutputFilename(originalName, settings, isWindowsAsset = false) 
   // Add format extension
   const extension = settings.outputFormat === 'png' ? 'png' : 'jpg';
   
-  return `image_${resolution}_${dpi}DPI.${extension}`;
+  const filename = `image_${resolution}_${dpi}DPI.${extension}`;
+  console.log('🖼️ Regular file filename:', filename);
+  return filename;
 }
 
 /**
