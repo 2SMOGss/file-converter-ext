@@ -434,25 +434,18 @@ function isValidImageFile(file) {
  */
 async function handleFindAssets() {
   try {
+    console.log('🔍 Starting Windows Assets processing...');
+    
     // Show loading state
     elements.findAssetsBtn.disabled = true;
     elements.findAssetsBtn.textContent = '🔄 Processing...';
     
     // Check if File System Access API is supported
+    console.log('📁 File System Access API available:', !!window.showDirectoryPicker);
     if (!window.showDirectoryPicker) {
-      // Fallback to showing paths if API not supported
-      const genericPath = '%USERPROFILE%\\AppData\\Local\\Packages\\Microsoft.Windows.ContentDeliveryManager_cw5n1h2txyewy\\LocalState\\Assets';
-      const examplePath = 'C:\\Users\\Rob\\AppData\\Local\\Packages\\Microsoft.Windows.ContentDeliveryManager_cw5n1h2txyewy\\LocalState\\Assets';
-      const msg = [
-        'Windows Spotlight assets folder (copy one of these into File Explorer):',
-        '',
-        `1) ${genericPath}`,
-        `2) ${examplePath}`,
-        '',
-        'Tip: Files have no extensions. Copy them to another folder and add ".jpg" to view.'
-      ].join('\n');
-      
-      showSuccessWithSave(msg, 'Windows_Spotlight_Paths.txt');
+      console.log('⚠️ File System Access API not available, using file input fallback');
+      // Fallback: Use file input to select multiple files from Assets folder
+      showAssetFileInput();
       return;
     }
     
@@ -490,6 +483,94 @@ async function handleFindAssets() {
     // Reset button state
     elements.findAssetsBtn.disabled = false;
     elements.findAssetsBtn.textContent = '🖼️ Find Windows Assets';
+  }
+}
+
+/**
+ * Show file input for selecting Windows Assets (fallback method)
+ */
+function showAssetFileInput() {
+  hideAllSections();
+  
+  const container = document.createElement('div');
+  container.innerHTML = `
+    <div style="margin-bottom: 16px; text-align: center;">
+      <h3 style="color: #333; margin-bottom: 8px;">Select Windows Spotlight Assets</h3>
+      <p style="color: #666; font-size: 14px; margin-bottom: 16px;">
+        Navigate to your Windows Assets folder and select the image files you want to convert:
+      </p>
+      <div style="background: #f0f7ff; padding: 12px; border-radius: 6px; margin-bottom: 16px; font-family: monospace; font-size: 12px; text-align: left;">
+        <strong>Windows Assets Location:</strong><br>
+        C:\\Users\\Rob\\AppData\\Local\\Packages\\Microsoft.Windows.ContentDeliveryManager_cw5n1h2txyewy\\LocalState\\Assets
+      </div>
+    </div>
+    
+    <div style="text-align: center; margin-bottom: 16px;">
+      <input type="file" id="assetFileInput" multiple accept="*/*" style="display: none;">
+      <button id="selectAssetFiles" style="background: #4A90E2; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 16px; font-weight: 500; cursor: pointer; margin-right: 12px;">
+        📁 Select Asset Files
+      </button>
+      <button id="cancelAssetSelection" style="background: #D0021B; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 16px; font-weight: 500; cursor: pointer;">
+        ❌ Cancel
+      </button>
+    </div>
+    
+    <div style="text-align: center; font-size: 12px; color: #666;">
+      <p><strong>Tip:</strong> In the file picker, navigate to the Assets folder above, then select all the files (Ctrl+A) and click Open.</p>
+    </div>
+  `;
+  
+  elements.resultsSection.style.display = 'block';
+  elements.successText.innerHTML = '';
+  elements.successText.appendChild(container);
+  
+  // Add event listeners
+  const selectBtn = document.getElementById('selectAssetFiles');
+  const cancelBtn = document.getElementById('cancelAssetSelection');
+  const fileInput = document.getElementById('assetFileInput');
+  
+  if (selectBtn) {
+    selectBtn.addEventListener('click', () => fileInput.click());
+  }
+  
+  if (fileInput) {
+    fileInput.addEventListener('change', (e) => handleAssetFileSelection(e.target.files));
+  }
+  
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', () => {
+      hideAllSections();
+      showMainInterface();
+    });
+  }
+}
+
+/**
+ * Handle asset file selection from file input
+ */
+function handleAssetFileSelection(files) {
+  try {
+    const assetFiles = Array.from(files).map(file => {
+      // Create a new File object with .jpg extension for processing
+      const modifiedFile = new File([file], file.name + '.jpg', { type: 'image/jpeg' });
+      return {
+        file: modifiedFile,
+        originalName: file.name,
+        size: file.size
+      };
+    });
+    
+    if (assetFiles.length === 0) {
+      showError('No files selected. Please try again.');
+      return;
+    }
+    
+    // Show found assets and let user choose which ones to process
+    showAssetSelection(assetFiles);
+    
+  } catch (error) {
+    console.error('Error processing selected asset files:', error);
+    showError('Error processing selected files. Please try again.');
   }
 }
 
