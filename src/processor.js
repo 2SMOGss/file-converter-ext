@@ -368,12 +368,14 @@ function downloadFile(blob, filename, downloadSubfolder = '', showInFolder = fal
       }
       
       console.log('📥 Downloading with filename:', fullFilename);
+      console.log('📥 Original filename:', filename);
+      console.log('📥 Download subfolder:', downloadSubfolder);
       
       // Use Chrome Downloads API
       chrome.downloads.download({
         url: url,
-        filename: fullFilename,
-        saveAs: showInFolder, // Only use Save As dialog if user wants to show in folder
+        filename: downloadSubfolder ? `${downloadSubfolder}/${filename}` : filename,
+        saveAs: true, // Always use Save As dialog to ensure filename is respected
         conflictAction: 'uniquify' // Ensure unique filename if conflict
       }, (downloadId) => {
         // Clean up object URL
