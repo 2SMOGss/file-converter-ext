@@ -33,28 +33,40 @@ let elements = {};
 /**
  * Initialize the popup when DOM is ready
  */
-document.addEventListener('DOMContentLoaded', initializePopup);
+document.addEventListener('DOMContentLoaded', () => {
+  try {
+    initializePopup();
+  } catch (error) {
+    console.error('❌ Error initializing popup:', error);
+  }
+});
 
 /**
  * Main initialization function
  */
 async function initializePopup() {
   try {
+    console.log('🚀 Initializing popup...');
+    
     // Get DOM elements
     cacheDOMElements();
+    console.log('✅ DOM elements cached');
     
     // Load user preferences
     await loadUserPreferences();
+    console.log('✅ User preferences loaded');
     
     // Set up event listeners
     setupEventListeners();
+    console.log('✅ Event listeners set up');
     
     // Initialize UI state
     updateUI();
     
-    console.log('File Converter Pro initialized successfully');
+    console.log('✅ File Converter Pro initialized successfully');
   } catch (error) {
-    console.error('Failed to initialize popup:', error);
+    console.error('❌ Failed to initialize popup:', error);
+    console.error('Error details:', error.stack);
     showError('Failed to initialize extension. Please try again.');
   }
 }
