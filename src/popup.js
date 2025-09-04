@@ -430,22 +430,211 @@ function isValidImageFile(file) {
 }
 
 /**
- * Handle Windows asset detection
+ * Handle Windows asset detection and processing
  */
 async function handleFindAssets() {
-  const genericPath = '%USERPROFILE%\\AppData\\Local\\Packages\\Microsoft.Windows.ContentDeliveryManager_cw5n1h2txyewy\\LocalState\\Assets';
-  const examplePath = 'C:\\Users\\Rob\\AppData\\Local\\Packages\\Microsoft.Windows.ContentDeliveryManager_cw5n1h2txyewy\\LocalState\\Assets';
-  const msg = [
-    'Windows Spotlight assets folder (copy one of these into File Explorer):',
-    '',
-    `1) ${genericPath}`,
-    `2) ${examplePath}`,
-    '',
-    'Tip: Files have no extensions. Copy them to another folder and add ".jpg" to view.'
-  ].join('\n');
+  try {
+    // Show loading state
+    elements.findAssetsBtn.disabled = true;
+    elements.findAssetsBtn.textContent = '🔄 Processing...';
+    
+    // Check if File System Access API is supported
+    if (!window.showDirectoryPicker) {
+      // Fallback to showing paths if API not supported
+      const genericPath = '%USERPROFILE%\\AppData\\Local\\Packages\\Microsoft.Windows.ContentDeliveryManager_cw5n1h2txyewy\\LocalState\\Assets';
+      const examplePath = 'C:\\Users\\Rob\\AppData\\Local\\Packages\\Microsoft.Windows.ContentDeliveryManager_cw5n1h2txyewy\\LocalState\\Assets';
+      const msg = [
+        'Windows Spotlight assets folder (copy one of these into File Explorer):',
+        '',
+        `1) ${genericPath}`,
+        `2) ${examplePath}`,
+        '',
+        'Tip: Files have no extensions. Copy them to another folder and add ".jpg" to view.'
+      ].join('\n');
+      
+      showSuccessWithSave(msg, 'Windows_Spotlight_Paths.txt');
+      return;
+    }
+    
+    // Open directory picker for Windows Assets folder
+    const directoryHandle = await window.showDirectoryPicker({
+      startIn: 'documents',
+      mode: 'read'
+    });
+    
+    // Process all files in the selected directory
+    await processWindowsAssets(directoryHandle);
+    
+  } catch (error) {
+    console.error('Error accessing Windows assets:', error);
+    
+    if (error.name === 'AbortError') {
+      // User cancelled the directory picker
+      showError('Directory selection cancelled.');
+    } else {
+      // Fallback to showing paths
+      const genericPath = '%USERPROFILE%\\AppData\\Local\\Packages\\Microsoft.Windows.ContentDeliveryManager_cw5n1h2txyewy\\LocalState\\Assets';
+      const examplePath = 'C:\\Users\\Rob\\AppData\\Local\\Packages\\Microsoft.Windows.ContentDeliveryManager_cw5n1h2txyewy\\LocalState\\Assets';
+      const msg = [
+        'Windows Spotlight assets folder (copy one of these into File Explorer):',
+        '',
+        `1) ${genericPath}`,
+        `2) ${examplePath}`,
+        '',
+        'Tip: Files have no extensions. Copy them to another folder and add ".jpg" to view.'
+      ].join('\n');
+      
+      showSuccessWithSave(msg, 'Windows_Spotlight_Paths.txt');
+    }
+  } finally {
+    // Reset button state
+    elements.findAssetsBtn.disabled = false;
+    elements.findAssetsBtn.textContent = '🖼️ Find Windows Assets';
+  }
+}
+
+/**
+ * Process Windows Assets from selected directory
+ */
+async function processWindowsAssets(directoryHandle) {
+  try {
+    const assetFiles = [];
+    
+    // Iterate through all files in the directory
+    for await (const [name, handle] of directoryHandle.entries()) {
+      if (handle.kind === 'file') {
+        // Check if it's likely an image file (no extension, reasonable size)
+        const file = await handle.getFile();
+        
+        // Filter for likely image files (no extension, reasonable size)
+        if (!name.includes('.') && file.size > 10000 && file.size < 50000000) {
+          // Create a File object with .jpg extension for processing
+          const modifiedFile = new File([file], name + '.jpg', { type: 'image/jpeg' });
+          assetFiles.push({
+            file: modifiedFile,
+            originalName: name,
+            size: file.size
+          });
+        }
+      }
+    }
+    
+    if (assetFiles.length === 0) {
+      showError('No Windows Spotlight assets found in the selected folder. Make sure you selected the correct Assets folder.');
+      return;
+    }
+    
+    // Show found assets and let user choose which ones to process
+    showAssetSelection(assetFiles);
+    
+  } catch (error) {
+    console.error('Error processing Windows assets:', error);
+    showError('Error reading files from the selected directory. Please try again.');
+  }
+}
+
+/**
+ * Show asset selection interface
+ */
+function showAssetSelection(assetFiles) {
+  hideAllSections();
   
-  // Show the message with a save option
-  showSuccessWithSave(msg, 'Windows_Spotlight_Paths.txt');
+  // Create selection interface
+  const container = document.createElement('div');
+  container.innerHTML = `
+    <div style="margin-bottom: 16px; text-align: center;">
+      <h3 style="color: #333; margin-bottom: 8px;">Found ${assetFiles.length} Windows Spotlight Assets</h3>
+      <p style="color: #666; font-size: 14px;">Select which assets you want to convert and save:</p>
+    </div>
+    
+    <div id="assetList" style="max-height: 300px; overflow-y: auto; margin-bottom: 16px; border: 1px solid #ddd; border-radius: 8px; padding: 12px;">
+      ${assetFiles.map((asset, index) => `
+        <div style="display: flex; align-items: center; padding: 8px; border-bottom: 1px solid #eee;">
+          <input type="checkbox" id="asset-${index}" checked style="margin-right: 12px;">
+          <div style="flex: 1;">
+            <div style="font-weight: 500; color: #333;">${asset.originalName}</div>
+            <div style="font-size: 12px; color: #666;">${formatFileSize(asset.size)}</div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+    
+    <div style="text-align: center;">
+      <button id="processSelectedAssets" style="background: #7ED321; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 16px; font-weight: 500; cursor: pointer; margin-right: 12px;">
+        🔄 Convert Selected Assets
+      </button>
+      <button id="selectAllAssets" style="background: #4A90E2; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 16px; font-weight: 500; cursor: pointer; margin-right: 12px;">
+        ✅ Select All
+      </button>
+      <button id="cancelAssetProcessing" style="background: #D0021B; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 16px; font-weight: 500; cursor: pointer;">
+        ❌ Cancel
+      </button>
+    </div>
+  `;
+  
+  elements.resultsSection.style.display = 'block';
+  elements.successText.innerHTML = '';
+  elements.successText.appendChild(container);
+  
+  // Add event listeners
+  const processBtn = document.getElementById('processSelectedAssets');
+  const selectAllBtn = document.getElementById('selectAllAssets');
+  const cancelBtn = document.getElementById('cancelAssetProcessing');
+  
+  if (processBtn) {
+    processBtn.addEventListener('click', () => processSelectedAssets(assetFiles));
+  }
+  
+  if (selectAllBtn) {
+    selectAllBtn.addEventListener('click', () => {
+      const checkboxes = document.querySelectorAll('#assetList input[type="checkbox"]');
+      checkboxes.forEach(cb => cb.checked = true);
+    });
+  }
+  
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', () => {
+      hideAllSections();
+      showMainInterface();
+    });
+  }
+}
+
+/**
+ * Process selected Windows assets
+ */
+async function processSelectedAssets(assetFiles) {
+  try {
+    const selectedAssets = [];
+    
+    // Get selected assets
+    assetFiles.forEach((asset, index) => {
+      const checkbox = document.getElementById(`asset-${index}`);
+      if (checkbox && checkbox.checked) {
+        selectedAssets.push(asset.file);
+      }
+    });
+    
+    if (selectedAssets.length === 0) {
+      showError('Please select at least one asset to convert.');
+      return;
+    }
+    
+    // Add selected assets to the file list
+    AppState.selectedFiles = selectedAssets;
+    updateFileList();
+    showOptionsAndActions();
+    
+    // Hide the asset selection interface
+    hideAllSections();
+    
+    // Show success message
+    showSuccess(`Added ${selectedAssets.length} Windows Spotlight assets for conversion. Configure your settings and click "Convert Files" to process them.`);
+    
+  } catch (error) {
+    console.error('Error processing selected assets:', error);
+    showError('Error processing selected assets. Please try again.');
+  }
 }
 
 /**
@@ -843,6 +1032,15 @@ function hideAllSections() {
   elements.progressSection.style.display = 'none';
   elements.resultsSection.style.display = 'none';
   elements.errorSection.style.display = 'none';
+}
+
+/**
+ * Show main interface (drop zone and assets button)
+ */
+function showMainInterface() {
+  hideAllSections();
+  // The drop zone and assets button are always visible by default
+  // This function is mainly for consistency with other interface functions
 }
 
 /**
