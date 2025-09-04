@@ -740,8 +740,8 @@ function showAssetSelection(assetFiles) {
     </div>
     
     <div style="text-align: center;">
-      <button id="processSelectedAssets" style="background: #7ED321; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 16px; font-weight: 500; cursor: pointer; margin-right: 12px;">
-        🔄 Convert Selected Assets
+      <button id="processSelectedAssets" style="background: #7ED321; color: white; border: none; padding: 16px 32px; border-radius: 8px; font-size: 18px; font-weight: 600; cursor: pointer; margin-right: 12px;">
+        🚀 Convert & Download Now
       </button>
       <button id="selectAllAssets" style="background: #4A90E2; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 16px; font-weight: 500; cursor: pointer; margin-right: 12px;">
         ✅ Select All
@@ -749,6 +749,10 @@ function showAssetSelection(assetFiles) {
       <button id="cancelAssetProcessing" style="background: #D0021B; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 16px; font-weight: 500; cursor: pointer;">
         ❌ Cancel
       </button>
+    </div>
+    
+    <div style="text-align: center; margin-top: 12px; font-size: 12px; color: #666;">
+      <p><strong>Default Settings:</strong> JPEG format, Print Quality (4500×5400), 100% quality, 300 DPI</p>
     </div>
   `;
   
@@ -800,20 +804,82 @@ async function processSelectedAssets(assetFiles) {
       return;
     }
     
-    // Add selected assets to the file list
-    AppState.selectedFiles = selectedAssets;
-    updateFileList();
-    showOptionsAndActions();
-    
-    // Hide the asset selection interface
-    hideAllSections();
-    
-    // Show success message
-    showSuccess(`Added ${selectedAssets.length} Windows Spotlight assets for conversion. Configure your settings and click "Convert Files" to process them.`);
+    // Start conversion immediately with default settings
+    await convertWindowsAssets(selectedAssets);
     
   } catch (error) {
     console.error('Error processing selected assets:', error);
     showError('Error processing selected assets. Please try again.');
+  }
+}
+
+/**
+ * Convert Windows assets immediately with default settings
+ */
+async function convertWindowsAssets(assetFiles) {
+  try {
+    console.log(`🔄 Converting ${assetFiles.length} Windows assets immediately...`);
+    
+    // Set default conversion settings for Windows assets
+    const defaultSettings = {
+      outputFormat: 'jpeg',
+      sizeOption: 'preset',
+      preset: 'print-quality',
+      customWidth: 4500,
+      customHeight: 5400,
+      maintainAspectRatio: true,
+      quality: 100,
+      dpi: 300
+    };
+    
+    // Show progress
+    hideAllSections();
+    elements.progressSection.style.display = 'block';
+    elements.progressText.textContent = 'Converting Windows assets...';
+    elements.progressFill.style.width = '0%';
+    elements.progressPercent.textContent = '0%';
+    
+    // Process each file
+    for (let i = 0; i < assetFiles.length; i++) {
+      const file = assetFiles[i];
+      const progress = ((i + 1) / assetFiles.length) * 100;
+      
+      elements.progressText.textContent = `Converting ${file.name}...`;
+      elements.progressFill.style.width = progress + '%';
+      elements.progressPercent.textContent = Math.round(progress) + '%';
+      
+      // Send file to background for processing
+      await new Promise((resolve) => {
+        chrome.runtime.sendMessage({
+          action: 'processFile',
+          file: {
+            name: file.name,
+            size: file.size,
+            type: file.type,
+            data: Array.from(new Uint8Array(await file.arrayBuffer()))
+          },
+          settings: defaultSettings,
+          isWindowsAsset: true
+        }, resolve);
+      });
+      
+      // Small delay to show progress
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    
+    // Show completion
+    elements.progressText.textContent = 'Conversion complete!';
+    elements.progressFill.style.width = '100%';
+    elements.progressPercent.textContent = '100%';
+    
+    // Show success message
+    setTimeout(() => {
+      showSuccess(`✅ Successfully converted ${assetFiles.length} Windows Spotlight assets! Check your Downloads folder.`);
+    }, 1000);
+    
+  } catch (error) {
+    console.error('Error converting Windows assets:', error);
+    showError('Error converting Windows assets. Please try again.');
   }
 }
 
