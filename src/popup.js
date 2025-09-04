@@ -160,7 +160,10 @@ function setupEventListeners() {
   }
   
   if (elements.findAssetsBtn) {
+    console.log('✅ Find Assets button found, adding event listener');
     elements.findAssetsBtn.addEventListener('click', handleFindAssets);
+  } else {
+    console.error('❌ Find Assets button not found!');
   }
   
   if (elements.clearBtn) {
@@ -534,6 +537,7 @@ function isValidImageFile(file) {
 async function handleFindAssets() {
   try {
     console.log('🔍 Starting Windows Assets processing...');
+    console.log('🔘 Button clicked - handleFindAssets called');
     
     // Show loading state
     elements.findAssetsBtn.disabled = true;
