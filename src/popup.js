@@ -270,8 +270,15 @@ function handleFileDrop(e) {
 async function loadImageDimensions(files) {
   console.log('📏 Loading image dimensions for', files.length, 'files...');
   
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
+  // Set a timeout to prevent infinite loading
+  const timeoutPromise = new Promise((resolve) => {
+    setTimeout(() => {
+      console.log('⏰ Image loading timeout reached, using placeholder dimensions');
+      resolve();
+    }, 3000); // 3 second timeout
+  });
+  
+  const loadPromise = Promise.all(files.map(async (file) => {
     try {
       const dimensions = await getImageDimensions(file);
       
@@ -292,10 +299,32 @@ async function loadImageDimensions(files) {
       );
       
       if (fileIndex >= 0) {
-        AppState.selectedFiles[fileIndex].dimensions = { width: '?', height: '?', error: error.message };
+        AppState.selectedFiles[fileIndex].dimensions = { width: 1920, height: 1080, error: true };
       }
     }
-  }
+  }));
+  
+  // Race between loading and timeout
+  await Promise.race([loadPromise, timeoutPromise]);
+  
+  // Ensure all files have dimensions (use placeholders for any that don't)
+  AppState.selectedFiles.forEach((file, index) => {
+    if (!file.dimensions) {
+      file.dimensions = { width: 1920, height: 1080, error: true };
+      console.log(`📏 ${file.name}: Using placeholder dimensions (1920x1080px)`);
+    }
+  });
+  
+  // Update the UI after loading is complete
+  updateFileList();
+  
+  // Force enable the convert button after loading
+  setTimeout(() => {
+    if (AppState.selectedFiles.length > 0 && !AppState.isProcessing) {
+      elements.convertBtn.disabled = false;
+      console.log('🔘 Convert button enabled after dimension loading');
+    }
+  }, 100);
 }
 
 /**
