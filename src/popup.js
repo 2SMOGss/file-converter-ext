@@ -428,8 +428,38 @@ async function processFiles(files) {
     // Auto-detect and set output format based on input files
     autoDetectOutputFormat(validFiles);
     
-    // Read actual image dimensions for each file
-    await loadImageDimensions(validFiles);
+    // Check if these are Windows assets (no extension, small size)
+    const areWindowsAssets = validFiles.every(file => 
+      !file.name.includes('.') && file.size < 1000000
+    );
+    
+    console.log('🔍 File analysis:', validFiles.map(f => ({
+      name: f.name,
+      size: f.size,
+      hasExtension: f.name.includes('.'),
+      isSmall: f.size < 1000000
+    })));
+    console.log('🖼️ Are Windows assets:', areWindowsAssets);
+    
+    if (areWindowsAssets) {
+      console.log('🖼️ Detected Windows Spotlight assets - skipping dimension loading');
+      // Add placeholder dimensions immediately for Windows assets
+      validFiles.forEach(file => {
+        const fileIndex = AppState.selectedFiles.findIndex(f => 
+          f.name === file.name && f.size === file.size && f.lastModified === file.lastModified
+        );
+        if (fileIndex >= 0) {
+          AppState.selectedFiles[fileIndex].dimensions = { 
+            width: 1920, 
+            height: 1080, 
+            isWindowsAsset: true 
+          };
+        }
+      });
+    } else {
+      // Read actual image dimensions for regular image files
+      await loadImageDimensions(validFiles);
+    }
     
     updateFileList();
     showOptionsAndActions();
@@ -816,7 +846,9 @@ function updateFileList() {
     // Get current resolution display
     let currentResolution = 'Loading...';
     if (file.dimensions) {
-      if (file.dimensions.error) {
+      if (file.dimensions.isWindowsAsset) {
+        currentResolution = 'Windows Asset';
+      } else if (file.dimensions.error) {
         currentResolution = 'Cannot read';
       } else {
         currentResolution = `${file.dimensions.width}×${file.dimensions.height}px`;
