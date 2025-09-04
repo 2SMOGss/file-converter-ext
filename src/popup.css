@@ -10,13 +10,13 @@
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  min-height: 600px;
+  min-height: 500px;
   color: #333;
 }
 
 .container {
-  width: 500px;
-  min-height: 600px;
+  width: 700px;
+  min-height: 500px;
   background: white;
   border-radius: 12px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
@@ -45,7 +45,7 @@ body {
 /* Drop Zone */
 .drop-zone {
   margin: 20px;
-  padding: 40px 20px;
+  padding: 20px;
   border: 3px dashed #4A90E2;
   border-radius: 12px;
   text-align: center;
@@ -66,9 +66,20 @@ body {
   border-style: solid;
 }
 
+.drop-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+
 .drop-content .drop-icon {
   font-size: 48px;
-  margin-bottom: 16px;
+  flex-shrink: 0;
+}
+
+.drop-content .drop-text {
+  text-align: left;
 }
 
 .drop-content h3 {
@@ -237,7 +248,7 @@ body {
 
 .options-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 16px;
   margin-bottom: 16px;
 }
