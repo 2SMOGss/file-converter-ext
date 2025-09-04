@@ -182,15 +182,24 @@ async function processSingleFile(file, settings, isWindowsAsset) {
     
     console.log('✅ File reconstructed:', file.name, 'Size:', file.size, 'Type:', file.type);
     
-    // Process the file
-    const result = await processImageFile(reconstructedFile, settings, isWindowsAsset);
-    
-    if (result) {
-      console.log('✅ Successfully processed:', file.name, '→', result.filename);
-      
-      // Download the file
-      await downloadFile(result.blob, result.filename, settings);
+    // Auto-detect Windows system assets
+    const isSystemAsset = assetDetector.detectAssetFile(reconstructedFile);
+    if (isSystemAsset) {
+      console.log(`🔍 Detected Windows system asset: ${reconstructedFile.name}`);
+      // Force JPEG output for system assets
+      settings.outputFormat = 'jpeg';
     }
+    
+    // Process the image with real Canvas API
+    const processedBlob = await processor.processImage(reconstructedFile, settings);
+    
+    // Generate filename
+    const outputName = generateOutputFilename(reconstructedFile.name, settings);
+    
+    console.log('✅ Successfully processed:', reconstructedFile.name, '→', outputName);
+    
+    // Trigger download
+    await downloadFile(processedBlob, outputName);
     
   } catch (error) {
     console.error('❌ Error processing file:', file.name, error);
