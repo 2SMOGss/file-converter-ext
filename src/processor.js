@@ -194,7 +194,7 @@ async function processSingleFile(file, settings, isWindowsAsset) {
     const processedBlob = await processor.processImage(reconstructedFile, settings);
     
     // Generate filename
-    const outputName = generateOutputFilename(reconstructedFile.name, settings);
+    const outputName = generateOutputFilename(reconstructedFile.name, settings, isSystemAsset);
     
     console.log('✅ Successfully processed:', reconstructedFile.name, '→', outputName);
     
@@ -255,7 +255,7 @@ async function processBatch(conversionData) {
       const processedBlob = await processor.processImage(file, settings);
       
       // Generate filename
-      const outputName = generateOutputFilename(file.name, settings);
+      const outputName = generateOutputFilename(file.name, settings, isSystemAsset);
       
       // Trigger download
       const downloadId = await downloadFile(processedBlob, outputName);
@@ -310,25 +310,34 @@ async function processBatch(conversionData) {
 /**
  * Generate output filename based on original name and settings
  */
-function generateOutputFilename(originalName, settings) {
-  // Remove original extension
-  const baseName = originalName.replace(/\.[^/.]+$/, "");
-  
-  // Add suffix based on processing
-  let suffix = '';
-  if (settings.preset && PRINT_PRESETS[settings.preset]) {
-    const presetName = settings.preset.replace(/-/g, '_');
-    suffix = `_${presetName}`;
-  } else if (settings.customWidth && settings.customHeight) {
-    suffix = `_${settings.customWidth}x${settings.customHeight}`;
-  } else if (settings.scalePercent && settings.scalePercent !== 100) {
-    suffix = `_${settings.scalePercent}pct`;
+function generateOutputFilename(originalName, settings, isWindowsAsset = false) {
+  // Check if this is a Windows asset
+  if (isWindowsAsset) {
+    // For Windows assets: "image_background.jpg"
+    const extension = settings.outputFormat === 'png' ? 'png' : 'jpg';
+    return `image_background.${extension}`;
   }
+  
+  // For regular JPEG/PNG files: "image_resolution_DPI.xxx"
+  let resolution = '';
+  
+  if (settings.preset && PRINT_PRESETS[settings.preset]) {
+    const preset = PRINT_PRESETS[settings.preset];
+    resolution = `${preset.width}x${preset.height}`;
+  } else if (settings.customWidth && settings.customHeight) {
+    resolution = `${settings.customWidth}x${settings.customHeight}`;
+  } else {
+    // Fallback to original dimensions if available
+    resolution = 'original';
+  }
+  
+  // Add DPI
+  const dpi = settings.dpi || 300;
   
   // Add format extension
   const extension = settings.outputFormat === 'png' ? 'png' : 'jpg';
   
-  return `${baseName}${suffix}.${extension}`;
+  return `image_${resolution}_${dpi}DPI.${extension}`;
 }
 
 /**
