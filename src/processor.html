@@ -36,6 +36,100 @@
       background: #ffe8e8;
       color: #8b0000;
     }
+    .summary-section {
+      margin: 15px 0;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      border-left: 4px solid #4A90E2;
+    }
+    .summary-section h4 {
+      margin: 0 0 10px 0;
+      color: #333;
+      font-size: 16px;
+    }
+    .file-summary-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid #e9ecef;
+    }
+    .file-summary-item:last-child {
+      border-bottom: none;
+    }
+    .file-name-summary {
+      font-weight: 500;
+      color: #333;
+      flex: 1;
+      margin-right: 10px;
+      text-overflow: ellipsis;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+    .resolution-summary {
+      font-size: 12px;
+      color: #666;
+      background: #e8f0fe;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-right: 10px;
+    }
+    .output-resolution-summary {
+      font-size: 12px;
+      color: #2e7d32;
+      background: #e8f5e8;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+    .settings-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      font-size: 14px;
+    }
+    .settings-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 5px 0;
+    }
+    .settings-label {
+      font-weight: 500;
+      color: #555;
+    }
+    .settings-value {
+      color: #333;
+      font-weight: 600;
+    }
+    .current-file-card {
+      background: #fff3cd;
+      border: 1px solid #ffeaa7;
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 10px;
+    }
+    .current-file-name {
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 8px;
+    }
+    .current-file-details {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      font-size: 12px;
+    }
+    .detail-item {
+      display: flex;
+      justify-content: space-between;
+    }
+    .detail-label {
+      color: #666;
+    }
+    .detail-value {
+      font-weight: 500;
+      color: #333;
+    }
   </style>
 </head>
 <body>
@@ -48,12 +142,49 @@
       Ready for processing
     </div>
     
+    <!-- Control buttons -->
+    <div class="controls" style="margin: 15px 0;">
+      <button id="debugBtn" onclick="showTestSummary()" style="margin: 5px; padding: 8px 16px; background: #4A90E2; color: white; border: none; border-radius: 4px; cursor: pointer;">
+        🐛 Show Test Summary
+      </button>
+      <button id="summaryToggle" onclick="toggleSummary()" style="margin: 5px; padding: 8px 16px; background: #7ED321; color: white; border: none; border-radius: 4px; cursor: pointer;">
+        📄 Toggle Summary
+      </button>
+      <button onclick="clearSavedSummary()" style="margin: 5px; padding: 8px 16px; background: #D0021B; color: white; border: none; border-radius: 4px; cursor: pointer;">
+        🗑️ Clear Summary
+      </button>
+    </div>
+    
+    <!-- Last processed info -->
+    <div id="lastProcessed" style="display: none; margin: 10px 0; padding: 8px; background: #e8f5e8; border-radius: 4px; font-size: 14px; color: #2e7d32;">
+      Last processed: Never
+    </div>
+    
+    <div id="processSummary" style="display: none;">
+      <h3>Process Summary</h3>
+      <div id="summaryContent">
+        <div class="summary-section">
+          <h4>Files to Process: <span id="totalFiles">0</span></h4>
+          <div id="filesSummary"></div>
+        </div>
+        <div class="summary-section">
+          <h4>Conversion Settings</h4>
+          <div id="settingsSummary"></div>
+        </div>
+      </div>
+    </div>
+
     <div id="progress" style="display: none;">
       <h3>Processing Files...</h3>
       <div style="background: #ddd; height: 20px; border-radius: 10px; overflow: hidden;">
         <div id="progressBar" style="background: linear-gradient(90deg, #4A90E2, #7ED321); height: 100%; width: 0%; transition: width 0.3s ease;"></div>
       </div>
       <p id="progressText">Starting...</p>
+      
+      <div id="currentFileInfo" style="margin-top: 15px;">
+        <h4>Currently Processing:</h4>
+        <div id="currentFileDetails"></div>
+      </div>
     </div>
     
     <div id="results" style="display: none;">

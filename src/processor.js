@@ -37,11 +37,19 @@ function initializeProcessor() {
   // Cache DOM elements
   elements = {
     status: document.getElementById('status'),
+    processSummary: document.getElementById('processSummary'),
+    totalFiles: document.getElementById('totalFiles'),
+    filesSummary: document.getElementById('filesSummary'),
+    settingsSummary: document.getElementById('settingsSummary'),
     progress: document.getElementById('progress'),
     progressBar: document.getElementById('progressBar'),
     progressText: document.getElementById('progressText'),
+    currentFileInfo: document.getElementById('currentFileInfo'),
+    currentFileDetails: document.getElementById('currentFileDetails'),
     results: document.getElementById('results'),
-    resultsText: document.getElementById('resultsText')
+    resultsText: document.getElementById('resultsText'),
+    summaryToggle: document.getElementById('summaryToggle'),
+    lastProcessed: document.getElementById('lastProcessed')
   };
   
   // Set up message listener
@@ -49,6 +57,15 @@ function initializeProcessor() {
   
   updateStatus('ready', 'Ready for processing');
   console.log('Processor initialized successfully');
+  
+  // Load and display last summary if available
+  loadLastSummary();
+  
+  // For debugging: show test data if accessed directly
+  if (window.location.search.includes('debug=true')) {
+    console.log('Debug mode: showing test summary');
+    showTestSummary();
+  }
 }
 
 /**
@@ -100,7 +117,15 @@ async function handleStartProcessing(data) {
     ProcessorState.errors = [];
     ProcessorState.progress = { current: 0, total: ProcessorState.currentBatch.length };
     
-    updateStatus('processing', 'Processing files...');
+    updateStatus('processing', 'Preparing files...');
+    
+    // Show process summary first
+    await showProcessSummary(data);
+    
+    // Wait a moment for user to see the summary
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Hide summary and show progress
     showProgress();
     
     // Start processing
@@ -154,8 +179,12 @@ async function processBatch(conversionData) {
   for (let i = 0; i < fileObjects.length; i++) {
     try {
       const file = fileObjects[i];
+      const originalFileData = files[i]; // Get original file data with dimensions
       ProcessorState.progress.current = i;
+      
+      // Update progress with current file details
       updateProgress(i, totalFiles, `Processing ${file.name}...`);
+      updateCurrentFileDisplay(file, originalFileData, settings);
       
       // Auto-detect Windows system assets
       const isSystemAsset = assetDetector.detectAssetFile(file);
@@ -269,6 +298,301 @@ function downloadFile(blob, filename) {
 }
 
 /**
+ * Load last summary from session storage
+ */
+async function loadLastSummary() {
+  try {
+    const result = await chrome.storage.session.get(['lastProcessSummary']);
+    const summaryData = result.lastProcessSummary;
+    
+    if (summaryData) {
+      console.log('📄 Found saved summary:', summaryData);
+      
+      // Update the status to show there's a saved summary
+      if (elements.lastProcessed) {
+        const processedDate = new Date(summaryData.timestamp).toLocaleString();
+        elements.lastProcessed.textContent = `Last processed: ${processedDate}`;
+        elements.lastProcessed.style.display = 'block';
+      }
+      
+      // Display the summary
+      await showProcessSummary(summaryData.data);
+      
+      // Add completed status
+      updateStatus('ready', `Last conversion: ${summaryData.data.files.length} files processed`);
+    } else {
+      console.log('📄 No saved summary found');
+      if (elements.lastProcessed) {
+        elements.lastProcessed.style.display = 'none';
+      }
+    }
+  } catch (error) {
+    console.warn('⚠️ Could not load last summary:', error);
+  }
+}
+
+/**
+ * Save current summary to session storage
+ */
+async function saveSummary(data) {
+  try {
+    const summaryData = {
+      timestamp: Date.now(),
+      data: data
+    };
+    
+    await chrome.storage.session.set({
+      lastProcessSummary: summaryData
+    });
+    
+    console.log('💾 Summary saved to session storage');
+  } catch (error) {
+    console.warn('⚠️ Could not save summary:', error);
+  }
+}
+
+/**
+ * Clear saved summary
+ */
+async function clearSavedSummary() {
+  try {
+    await chrome.storage.session.remove(['lastProcessSummary']);
+    console.log('🗑️ Summary cleared from session storage');
+    
+    if (elements.lastProcessed) {
+      elements.lastProcessed.style.display = 'none';
+    }
+    
+    // Hide summary
+    elements.processSummary.style.display = 'none';
+    updateStatus('ready', 'Ready for processing');
+  } catch (error) {
+    console.warn('⚠️ Could not clear summary:', error);
+  }
+}
+
+/**
+ * Toggle summary visibility
+ */
+function toggleSummary() {
+  const isVisible = elements.processSummary.style.display !== 'none';
+  elements.processSummary.style.display = isVisible ? 'none' : 'block';
+  
+  if (elements.summaryToggle) {
+    elements.summaryToggle.textContent = isVisible ? '📄 Show Last Summary' : '📄 Hide Summary';
+  }
+}
+
+/**
+ * Show test summary for debugging
+ */
+function showTestSummary() {
+  const testData = {
+    files: [
+      {
+        name: 'sample-image.jpg',
+        dimensions: { width: 1920, height: 1080 }
+      },
+      {
+        name: 'test-photo.png',
+        dimensions: { width: 3000, height: 2000 }
+      }
+    ],
+    settings: {
+      outputFormat: 'jpeg',
+      sizeOption: 'preset',
+      preset: 'print-quality',
+      quality: 80,
+      dpi: 300,
+      maintainAspectRatio: true
+    }
+  };
+  
+  showProcessSummary(testData);
+}
+
+/**
+ * Show process summary with file details and settings
+ */
+async function showProcessSummary(data) {
+  const { files, settings } = data;
+  
+  // Save summary to session storage
+  await saveSummary(data);
+  
+  // Show summary section
+  elements.processSummary.style.display = 'block';
+  elements.progress.style.display = 'none';
+  elements.results.style.display = 'none';
+  
+  // Update total files count
+  elements.totalFiles.textContent = files.length;
+  
+  // Display files summary with actual resolutions
+  let filesSummaryHTML = '';
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    
+    // Get current resolution from file data
+    let currentResolution = 'Reading...';
+    if (file.dimensions) {
+      if (file.dimensions.error) {
+        currentResolution = 'Cannot read';
+      } else {
+        currentResolution = `${file.dimensions.width}×${file.dimensions.height}px`;
+      }
+    }
+    
+    // Calculate output resolution
+    const outputResolution = calculateOutputResolutionFromData(file, settings);
+    
+    filesSummaryHTML += `
+      <div class="file-summary-item">
+        <span class="file-name-summary" title="${file.name}">${file.name}</span>
+        <span class="resolution-summary">${currentResolution}</span>
+        <span class="output-resolution-summary">${outputResolution}</span>
+      </div>
+    `;
+  }
+  elements.filesSummary.innerHTML = filesSummaryHTML;
+  
+  // Display conversion settings
+  const presetName = settings.preset && PRINT_PRESETS[settings.preset] ? 
+                    PRINT_PRESETS[settings.preset].name : 'Custom';
+  
+  const settingsHTML = `
+    <div class="settings-grid">
+      <div class="settings-item">
+        <span class="settings-label">Output Format:</span>
+        <span class="settings-value">${settings.outputFormat.toUpperCase()}</span>
+      </div>
+      <div class="settings-item">
+        <span class="settings-label">Size Mode:</span>
+        <span class="settings-value">${settings.sizeOption || 'original'}</span>
+      </div>
+      <div class="settings-item">
+        <span class="settings-label">Preset:</span>
+        <span class="settings-value">${presetName}</span>
+      </div>
+      <div class="settings-item">
+        <span class="settings-label">Quality:</span>
+        <span class="settings-value">${settings.quality || 80}%</span>
+      </div>
+      <div class="settings-item">
+        <span class="settings-label">DPI:</span>
+        <span class="settings-value">${settings.dpi || 300}</span>
+      </div>
+      <div class="settings-item">
+        <span class="settings-label">Maintain Aspect:</span>
+        <span class="settings-value">${settings.maintainAspectRatio ? 'Yes' : 'No'}</span>
+      </div>
+    </div>
+  `;
+  elements.settingsSummary.innerHTML = settingsHTML;
+}
+
+/**
+ * Calculate output resolution from file data and settings (same logic as popup)
+ */
+function calculateOutputResolutionFromData(fileData, settings) {
+  if (!fileData.dimensions || fileData.dimensions.error) {
+    return 'Unknown';
+  }
+  
+  const originalWidth = fileData.dimensions.width;
+  const originalHeight = fileData.dimensions.height;
+  
+  let targetWidth, targetHeight;
+  
+  // Apply preset if specified
+  if (settings.sizeOption === 'preset' && settings.preset && PRINT_PRESETS[settings.preset]) {
+    const preset = PRINT_PRESETS[settings.preset];
+    targetWidth = preset.width;
+    targetHeight = preset.height;
+  }
+  // Custom dimensions
+  else if (settings.sizeOption === 'custom') {
+    targetWidth = settings.customWidth || 4500;
+    targetHeight = settings.customHeight || 5400;
+  }
+  // Keep original size
+  else {
+    targetWidth = originalWidth;
+    targetHeight = originalHeight;
+  }
+  
+  // Apply aspect ratio adjustment if enabled
+  if (settings.maintainAspectRatio && settings.sizeOption !== 'original') {
+    const originalAspect = originalWidth / originalHeight;
+    const targetAspect = targetWidth / targetHeight;
+    
+    if (originalAspect > targetAspect) {
+      // Image is wider - fit to width
+      targetHeight = Math.round(targetWidth / originalAspect);
+    } else {
+      // Image is taller - fit to height
+      targetWidth = Math.round(targetHeight * originalAspect);
+    }
+  }
+  
+  return `${targetWidth}×${targetHeight}px`;
+}
+
+/**
+ * Update current file display during processing
+ */
+function updateCurrentFileDisplay(file, originalFileData, settings) {
+  if (!elements.currentFileDetails) return;
+  
+  // Get current resolution
+  let currentResolution = 'Unknown';
+  if (originalFileData.dimensions && !originalFileData.dimensions.error) {
+    currentResolution = `${originalFileData.dimensions.width}×${originalFileData.dimensions.height}px`;
+  }
+  
+  // Calculate output resolution
+  const outputResolution = calculateOutputResolutionFromData(originalFileData, settings);
+  
+  // Format file size
+  const fileSize = formatBytes(file.size);
+  
+  const currentFileHTML = `
+    <div class="current-file-card">
+      <div class="current-file-name">${file.name}</div>
+      <div class="current-file-details">
+        <div class="detail-item">
+          <span class="detail-label">Current Size:</span>
+          <span class="detail-value">${currentResolution}</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">Output Size:</span>
+          <span class="detail-value">${outputResolution}</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">File Size:</span>
+          <span class="detail-value">${fileSize}</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">Format:</span>
+          <span class="detail-value">${settings.outputFormat.toUpperCase()}</span>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  elements.currentFileDetails.innerHTML = currentFileHTML;
+}
+
+/**
+ * Format bytes for display
+ */
+function formatBytes(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+/**
  * Update processor status
  */
 function updateStatus(type, message) {
@@ -280,6 +604,8 @@ function updateStatus(type, message) {
  * Show progress section
  */
 function showProgress() {
+  // Keep the summary visible during processing
+  elements.processSummary.style.display = 'block';
   elements.progress.style.display = 'block';
   elements.results.style.display = 'none';
 }
@@ -309,6 +635,7 @@ function updateProgress(current, total, text) {
  * Show results section
  */
 function showResults() {
+  // Keep summary visible but show results too
   elements.progress.style.display = 'none';
   elements.results.style.display = 'block';
   
@@ -321,6 +648,13 @@ function showResults() {
   }
   
   elements.resultsText.textContent = resultsMessage;
+  
+  // Update the last processed timestamp
+  if (elements.lastProcessed) {
+    const processedDate = new Date().toLocaleString();
+    elements.lastProcessed.textContent = `Last processed: ${processedDate}`;
+    elements.lastProcessed.style.display = 'block';
+  }
 }
 
 /**

@@ -262,6 +262,71 @@ function handleFileDrop(e) {
 }
 
 /**
+ * Load actual image dimensions for files
+ */
+async function loadImageDimensions(files) {
+  console.log('📏 Loading image dimensions for', files.length, 'files...');
+  
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    try {
+      const dimensions = await getImageDimensions(file);
+      
+      // Find the file in selectedFiles and add dimensions
+      const fileIndex = AppState.selectedFiles.findIndex(f => 
+        f.name === file.name && f.size === file.size && f.lastModified === file.lastModified
+      );
+      
+      if (fileIndex >= 0) {
+        AppState.selectedFiles[fileIndex].dimensions = dimensions;
+        console.log(`📏 ${file.name}: ${dimensions.width}x${dimensions.height}px`);
+      }
+    } catch (error) {
+      console.warn(`⚠️ Could not read dimensions for ${file.name}:`, error);
+      // Add placeholder dimensions for files that can't be read
+      const fileIndex = AppState.selectedFiles.findIndex(f => 
+        f.name === file.name && f.size === file.size && f.lastModified === file.lastModified
+      );
+      
+      if (fileIndex >= 0) {
+        AppState.selectedFiles[fileIndex].dimensions = { width: '?', height: '?', error: error.message };
+      }
+    }
+  }
+}
+
+/**
+ * Get actual image dimensions from file
+ */
+function getImageDimensions(file) {
+  return new Promise((resolve, reject) => {
+    if (!file || !file.type.startsWith('image/')) {
+      // Try to load anyway for files without proper MIME type (like Windows assets)
+    }
+    
+    const img = new Image();
+    
+    img.onload = function() {
+      const dimensions = {
+        width: this.naturalWidth || this.width,
+        height: this.naturalHeight || this.height
+      };
+      URL.revokeObjectURL(img.src); // Clean up
+      resolve(dimensions);
+    };
+    
+    img.onerror = function() {
+      URL.revokeObjectURL(img.src); // Clean up
+      reject(new Error('Failed to load image'));
+    };
+    
+    // Create object URL from file
+    const objectUrl = URL.createObjectURL(file);
+    img.src = objectUrl;
+  });
+}
+
+/**
  * Handle file selection via input
  */
 function handleFileSelection(e) {
@@ -272,7 +337,7 @@ function handleFileSelection(e) {
 /**
  * Process selected files
  */
-function processFiles(files) {
+async function processFiles(files) {
   const validFiles = [];
   const errors = [];
   
@@ -290,6 +355,9 @@ function processFiles(files) {
     
     // Auto-detect and set output format based on input files
     autoDetectOutputFormat(validFiles);
+    
+    // Read actual image dimensions for each file
+    await loadImageDimensions(validFiles);
     
     updateFileList();
     showOptionsAndActions();
@@ -390,12 +458,81 @@ function updateFileList() {
   AppState.selectedFiles.forEach((file, index) => {
     const fileItem = document.createElement('div');
     fileItem.className = 'file-item';
+    
+    // Get current resolution display
+    let currentResolution = 'Loading...';
+    if (file.dimensions) {
+      if (file.dimensions.error) {
+        currentResolution = 'Cannot read';
+      } else {
+        currentResolution = `${file.dimensions.width}×${file.dimensions.height}px`;
+      }
+    }
+    
+    // Calculate and display output resolution
+    const outputResolution = calculateOutputResolution(file);
+    
     fileItem.innerHTML = `
-      <span class="file-name" title="${file.name}">${file.name}</span>
-      <span class="file-size">${formatFileSize(file.size)}</span>
+      <div class="file-info">
+        <span class="file-name" title="${file.name}">${file.name}</span>
+        <div class="resolution-info">
+          <span class="current-resolution">Current: ${currentResolution}</span>
+          <span class="arrow">→</span>
+          <span class="output-resolution">Output: ${outputResolution}</span>
+        </div>
+        <span class="file-size">${formatFileSize(file.size)}</span>
+      </div>
     `;
     elements.fileItems.appendChild(fileItem);
   });
+}
+
+/**
+ * Calculate output resolution for a file based on current settings
+ */
+function calculateOutputResolution(file) {
+  if (!file.dimensions || file.dimensions.error) {
+    return 'Unknown';
+  }
+  
+  const settings = AppState.conversionSettings;
+  const originalWidth = file.dimensions.width;
+  const originalHeight = file.dimensions.height;
+  
+  let targetWidth, targetHeight;
+  
+  // Apply preset if specified
+  if (settings.sizeOption === 'preset' && settings.preset && PRINT_PRESETS[settings.preset]) {
+    const preset = PRINT_PRESETS[settings.preset];
+    targetWidth = preset.width;
+    targetHeight = preset.height;
+  }
+  // Custom dimensions
+  else if (settings.sizeOption === 'custom') {
+    targetWidth = settings.customWidth || 4500;
+    targetHeight = settings.customHeight || 5400;
+  }
+  // Keep original size
+  else {
+    targetWidth = originalWidth;
+    targetHeight = originalHeight;
+  }
+  
+  // Apply aspect ratio adjustment if enabled
+  if (settings.maintainAspectRatio && settings.sizeOption !== 'original') {
+    const originalAspect = originalWidth / originalHeight;
+    const targetAspect = targetWidth / targetHeight;
+    
+    if (originalAspect > targetAspect) {
+      // Image is wider - fit to width
+      targetHeight = Math.round(targetWidth / originalAspect);
+    } else {
+      // Image is taller - fit to height
+      targetWidth = Math.round(targetHeight * originalAspect);
+    }
+  }
+  
+  return `${targetWidth}×${targetHeight}px`;
 }
 
 /**
@@ -443,6 +580,7 @@ function handleSizeOptionChange(e) {
   elements.customGroup.style.display = selectedOption === 'custom' ? 'block' : 'none';
   
   updateConversionSettings();
+  updateFileList(); // Refresh output resolution display
 }
 
 /**
@@ -468,6 +606,9 @@ function updateConversionSettings() {
     quality: parseInt(elements.qualitySlider.value),
     dpi: parseInt(elements.dpiSelect.value)
   };
+  
+  // Update file list to refresh output resolution display
+  updateFileList();
 }
 
 /**
@@ -558,6 +699,7 @@ async function startRealConversion() {
           type: file.type,
           size: file.size,
           lastModified: file.lastModified,
+          dimensions: file.dimensions, // Include actual dimensions read from the image
           data: Array.from(new Uint8Array(arrayBuffer)) // Convert to array for serialization
         };
       }));
