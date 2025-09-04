@@ -430,7 +430,17 @@ function isValidImageFile(file) {
  * Handle Windows asset detection
  */
 async function handleFindAssets() {
-  showError('Windows asset detection coming soon!\nFor now, please browse to:\nC:\\Users\\[Username]\\AppData\\Local\\Packages\\Microsoft.Windows.ContentDeliveryManager_*\\LocalState\\Assets');
+  const genericPath = '%USERPROFILE%\\AppData\\Local\\Packages\\Microsoft.Windows.ContentDeliveryManager_cw5n1h2txyewy\\LocalState\\Assets';
+  const examplePath = 'C:\\Users\\Rob\\AppData\\Local\\Packages\\Microsoft.Windows.ContentDeliveryManager_cw5n1h2txyewy\\LocalState\\Assets';
+  const msg = [
+    'Windows Spotlight assets folder (copy one of these into File Explorer):',
+    '',
+    `1) ${genericPath}`,
+    `2) ${examplePath}`,
+    '',
+    'Tip: Files have no extensions. Copy them to another folder and add ".jpg" to view.'
+  ].join('\n');
+  showSuccess(msg);
 }
 
 /**
