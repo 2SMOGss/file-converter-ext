@@ -161,7 +161,17 @@ function setupEventListeners() {
   
   if (elements.findAssetsBtn) {
     console.log('✅ Find Assets button found, adding event listener');
-    elements.findAssetsBtn.addEventListener('click', handleFindAssets);
+    elements.findAssetsBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      console.log('🔘 Button click detected');
+      alert('Button clicked! Check console for details.');
+      handleFindAssets().catch(error => {
+        console.error('❌ Error in handleFindAssets:', error);
+        // Reset button state on error
+        elements.findAssetsBtn.disabled = false;
+        elements.findAssetsBtn.textContent = '🖼️ Process Windows Spotlight Assets';
+      });
+    });
   } else {
     console.error('❌ Find Assets button not found!');
   }
@@ -853,6 +863,7 @@ async function convertWindowsAssets(assetFiles) {
       elements.progressPercent.textContent = Math.round(progress) + '%';
       
       // Send file to background for processing
+      const fileData = await file.arrayBuffer();
       await new Promise((resolve) => {
         chrome.runtime.sendMessage({
           action: 'processFile',
@@ -860,7 +871,7 @@ async function convertWindowsAssets(assetFiles) {
             name: file.name,
             size: file.size,
             type: file.type,
-            data: Array.from(new Uint8Array(await file.arrayBuffer()))
+            data: Array.from(new Uint8Array(fileData))
           },
           settings: defaultSettings,
           isWindowsAsset: true
