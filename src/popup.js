@@ -303,9 +303,7 @@ async function loadImageDimensions(files) {
  */
 function getImageDimensions(file) {
   return new Promise((resolve, reject) => {
-    if (!file || !file.type.startsWith('image/')) {
-      // Try to load anyway for files without proper MIME type (like Windows assets)
-    }
+    console.log(`🔍 Loading dimensions for: ${file.name} (type: ${file.type})`);
     
     const img = new Image();
     
@@ -314,17 +312,59 @@ function getImageDimensions(file) {
         width: this.naturalWidth || this.width,
         height: this.naturalHeight || this.height
       };
+      console.log(`✅ Loaded dimensions: ${dimensions.width}x${dimensions.height}px`);
       URL.revokeObjectURL(img.src); // Clean up
       resolve(dimensions);
     };
     
-    img.onerror = function() {
+    img.onerror = function(error) {
+      console.warn(`❌ Failed to load image ${file.name}:`, error);
       URL.revokeObjectURL(img.src); // Clean up
-      reject(new Error('Failed to load image'));
+      
+      // For Windows assets, try with different MIME types
+      if (!file.type || file.type === 'application/octet-stream') {
+        console.log(`🔄 Retrying with JPEG MIME type for ${file.name}`);
+        retryWithMimeType(file, 'image/jpeg').then(resolve).catch(() => {
+          // If all else fails, return placeholder dimensions
+          console.log(`⚠️ Using placeholder dimensions for ${file.name}`);
+          resolve({ width: 1920, height: 1080 }); // Common wallpaper size
+        });
+      } else {
+        reject(new Error('Failed to load image'));
+      }
     };
     
     // Create object URL from file
     const objectUrl = URL.createObjectURL(file);
+    img.src = objectUrl;
+  });
+}
+
+/**
+ * Retry loading image with different MIME type
+ */
+function retryWithMimeType(file, mimeType) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    
+    img.onload = function() {
+      const dimensions = {
+        width: this.naturalWidth || this.width,
+        height: this.naturalHeight || this.height
+      };
+      console.log(`✅ Retry successful: ${dimensions.width}x${dimensions.height}px`);
+      URL.revokeObjectURL(img.src);
+      resolve(dimensions);
+    };
+    
+    img.onerror = function() {
+      URL.revokeObjectURL(img.src);
+      reject(new Error('Retry failed'));
+    };
+    
+    // Create new file with proper MIME type
+    const newFile = new File([file], file.name, { type: mimeType });
+    const objectUrl = URL.createObjectURL(newFile);
     img.src = objectUrl;
   });
 }
