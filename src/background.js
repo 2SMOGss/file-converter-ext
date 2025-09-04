@@ -234,7 +234,7 @@ async function getOrCreateProcessingTab() {
     // Create new processing tab
     const tab = await chrome.tabs.create({
       url: chrome.runtime.getURL('processor.html'),
-      active: true // Make visible for debugging
+      active: false // Hidden from user
     });
     
     console.log('Created processing tab:', tab.id);
