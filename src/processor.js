@@ -86,6 +86,11 @@ function handleMessage(message, sender, sendResponse) {
       sendResponse({ success: true });
       break;
       
+    case 'PROCESS_SINGLE_FILE':
+      handleProcessSingleFile(message.data);
+      sendResponse({ success: true });
+      break;
+      
     case 'CONVERSION_PROGRESS':
     case 'CONVERSION_COMPLETE':
     case 'CONVERSION_ERROR':
@@ -146,6 +151,49 @@ async function handleStartProcessing(data) {
     });
   } finally {
     ProcessorState.isProcessing = false;
+  }
+}
+
+/**
+ * Handle single file processing (for Windows assets)
+ */
+async function handleProcessSingleFile(data) {
+  try {
+    console.log('Processing single file:', data.file.name);
+    
+    // Process the single file directly
+    await processSingleFile(data.file, data.settings, data.isWindowsAsset);
+    
+  } catch (error) {
+    console.error('Error processing single file:', error);
+  }
+}
+
+/**
+ * Process a single file
+ */
+async function processSingleFile(file, settings, isWindowsAsset) {
+  try {
+    console.log('🔄 Processing single file:', file.name);
+    
+    // Reconstruct file from data
+    const fileBlob = new Blob([new Uint8Array(file.data)], { type: file.type || 'image/jpeg' });
+    const reconstructedFile = new File([fileBlob], file.name, { type: file.type || 'image/jpeg' });
+    
+    console.log('✅ File reconstructed:', file.name, 'Size:', file.size, 'Type:', file.type);
+    
+    // Process the file
+    const result = await processImageFile(reconstructedFile, settings, isWindowsAsset);
+    
+    if (result) {
+      console.log('✅ Successfully processed:', file.name, '→', result.filename);
+      
+      // Download the file
+      await downloadFile(result.blob, result.filename, settings);
+    }
+    
+  } catch (error) {
+    console.error('❌ Error processing file:', file.name, error);
   }
 }
 

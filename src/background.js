@@ -52,7 +52,10 @@ async function initializeDefaultSettings() {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('Background received message:', message);
   
-  switch (message.type) {
+  // Handle both 'type' and 'action' message formats
+  const messageType = message.type || message.action;
+  
+  switch (messageType) {
     case 'GET_SETTINGS':
       handleGetSettings(sendResponse);
       break;
@@ -77,8 +80,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       handleConversionError(message.data, sendResponse);
       break;
       
+    case 'processFile':
+      handleProcessFile(message, sendResponse);
+      break;
+      
     default:
-      console.warn('Unknown message type:', message.type);
+      console.warn('Unknown message type/action:', messageType);
       sendResponse({ success: false, error: 'Unknown message type' });
   }
   
@@ -228,6 +235,33 @@ async function handleConversionError(data, sendResponse) {
     sendResponse({ success: true });
   } catch (error) {
     console.error('Failed to handle conversion error:', error);
+    sendResponse({ success: false, error: error.message });
+  }
+}
+
+/**
+ * Handle direct file processing (for Windows assets)
+ */
+async function handleProcessFile(message, sendResponse) {
+  try {
+    console.log('Processing file directly:', message.file.name);
+    
+    // Create or get processing tab
+    const processingTab = await getOrCreateProcessingTab();
+    
+    // Send file to processor
+    await sendMessageToProcessorWithRetry(processingTab.id, {
+      type: 'PROCESS_SINGLE_FILE',
+      data: {
+        file: message.file,
+        settings: message.settings,
+        isWindowsAsset: message.isWindowsAsset
+      }
+    });
+    
+    sendResponse({ success: true, tabId: processingTab.id });
+  } catch (error) {
+    console.error('Failed to process file:', error);
     sendResponse({ success: false, error: error.message });
   }
 }

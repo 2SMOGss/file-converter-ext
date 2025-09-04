@@ -164,7 +164,6 @@ function setupEventListeners() {
     elements.findAssetsBtn.addEventListener('click', (e) => {
       e.preventDefault();
       console.log('🔘 Button click detected');
-      alert('Button clicked! Check console for details.');
       handleFindAssets().catch(error => {
         console.error('❌ Error in handleFindAssets:', error);
         // Reset button state on error
@@ -941,13 +940,13 @@ function updateFileList() {
     
     fileItem.innerHTML = `
       <div class="file-info">
-        <span class="file-name" title="${file.name}">${file.name}</span>
+      <span class="file-name" title="${file.name}">${file.name}</span>
         <div class="resolution-info">
           <span class="current-resolution">Current: ${currentResolution}</span>
           <span class="arrow">→</span>
           <span class="output-resolution">Output: ${outputResolution}</span>
         </div>
-        <span class="file-size">${formatFileSize(file.size)}</span>
+      <span class="file-size">${formatFileSize(file.size)}</span>
       </div>
     `;
     elements.fileItems.appendChild(fileItem);
@@ -1381,7 +1380,7 @@ async function loadUserPreferences() {
       if (elements.showInFolderAfterDownload && prefs.showInFolderAfterDownload !== undefined) {
         elements.showInFolderAfterDownload.checked = !!prefs.showInFolderAfterDownload;
       }
-
+      
       updateConversionSettings();
     }
   } catch (error) {
