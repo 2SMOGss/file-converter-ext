@@ -443,7 +443,9 @@ async function handleFindAssets() {
     '',
     'Tip: Files have no extensions. Copy them to another folder and add ".jpg" to view.'
   ].join('\n');
-  showSuccess(msg);
+  
+  // Show the message with a save option
+  showSuccessWithSave(msg, 'Windows_Spotlight_Paths.txt');
 }
 
 /**
@@ -782,6 +784,44 @@ function showSuccess(message) {
 }
 
 /**
+ * Show success message with save option
+ */
+function showSuccessWithSave(message, filename) {
+  hideAllSections();
+  elements.resultsSection.style.display = 'block';
+  
+  // Create a container for the message and save button
+  const container = document.createElement('div');
+  container.innerHTML = `
+    <div style="margin-bottom: 16px; white-space: pre-line; text-align: left; background: #f0f7ff; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 12px; line-height: 1.4;">
+      ${message}
+    </div>
+    <button id="savePathsBtn" style="background: #4A90E2; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 16px; font-weight: 500; cursor: pointer; margin-right: 12px;">
+      💾 Save Paths to File
+    </button>
+    <button id="copyPathsBtn" style="background: #7ED321; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 16px; font-weight: 500; cursor: pointer;">
+      📋 Copy to Clipboard
+    </button>
+  `;
+  
+  // Clear existing content and add new content
+  elements.successText.innerHTML = '';
+  elements.successText.appendChild(container);
+  
+  // Add event listeners for the buttons
+  const saveBtn = document.getElementById('savePathsBtn');
+  const copyBtn = document.getElementById('copyPathsBtn');
+  
+  if (saveBtn) {
+    saveBtn.addEventListener('click', () => saveTextToFile(message, filename));
+  }
+  
+  if (copyBtn) {
+    copyBtn.addEventListener('click', () => copyToClipboard(message));
+  }
+}
+
+/**
  * Show error message
  */
 function showError(message) {
@@ -911,3 +951,65 @@ async function saveUserPreferences() {
 
 // Save preferences when settings change
 document.addEventListener('change', saveUserPreferences);
+
+/**
+ * Save text content to a file
+ */
+function saveTextToFile(text, filename) {
+  try {
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    
+    // Create a temporary download link
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.style.display = 'none';
+    
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    
+    // Clean up the URL
+    URL.revokeObjectURL(url);
+    
+    // Show success feedback
+    const saveBtn = document.getElementById('savePathsBtn');
+    if (saveBtn) {
+      const originalText = saveBtn.textContent;
+      saveBtn.textContent = '✅ Saved!';
+      saveBtn.style.background = '#7ED321';
+      setTimeout(() => {
+        saveBtn.textContent = originalText;
+        saveBtn.style.background = '#4A90E2';
+      }, 2000);
+    }
+  } catch (error) {
+    console.error('Failed to save file:', error);
+    showError('Failed to save file. Please try copying to clipboard instead.');
+  }
+}
+
+/**
+ * Copy text to clipboard
+ */
+async function copyToClipboard(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    
+    // Show success feedback
+    const copyBtn = document.getElementById('copyPathsBtn');
+    if (copyBtn) {
+      const originalText = copyBtn.textContent;
+      copyBtn.textContent = '✅ Copied!';
+      copyBtn.style.background = '#4A90E2';
+      setTimeout(() => {
+        copyBtn.textContent = originalText;
+        copyBtn.style.background = '#7ED321';
+      }, 2000);
+    }
+  } catch (error) {
+    console.error('Failed to copy to clipboard:', error);
+    showError('Failed to copy to clipboard. Please try saving to file instead.');
+  }
+}
