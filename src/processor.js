@@ -198,8 +198,12 @@ async function processSingleFile(file, settings, isWindowsAsset) {
     
     console.log('✅ Successfully processed:', reconstructedFile.name, '→', outputName);
     
+    // Get user preferences for download settings
+    const prefs = await chrome.storage.local.get(['userPreferences']);
+    const userPreferences = prefs.userPreferences || {};
+    
     // Trigger download
-    await downloadFile(processedBlob, outputName);
+    await downloadFile(processedBlob, outputName, userPreferences.downloadSubfolder, userPreferences.showInFolderAfterDownload);
     
   } catch (error) {
     console.error('❌ Error processing file:', file.name, error);
@@ -257,17 +261,12 @@ async function processBatch(conversionData) {
       // Generate filename
       const outputName = generateOutputFilename(file.name, settings, isSystemAsset);
       
+      // Get user preferences for download settings
+      const prefs = await chrome.storage.local.get(['userPreferences']);
+      const userPreferences = prefs.userPreferences || {};
+      
       // Trigger download
-      const downloadId = await downloadFile(processedBlob, outputName);
-      try {
-        const prefs = await chrome.storage.local.get(['userPreferences']);
-        const show = !!prefs?.userPreferences?.showInFolderAfterDownload;
-        if (show && downloadId) {
-          // Small delay to ensure the download item is registered
-          await new Promise(r => setTimeout(r, 300));
-          chrome.downloads.show(downloadId);
-        }
-      } catch {}
+      const downloadId = await downloadFile(processedBlob, outputName, userPreferences.downloadSubfolder, userPreferences.showInFolderAfterDownload);
       
       // Track success
       const processedFile = {
@@ -356,17 +355,26 @@ function generateOutputFilename(originalName, settings, isWindowsAsset = false) 
 /**
  * Download file using Chrome Downloads API
  */
-function downloadFile(blob, filename) {
+function downloadFile(blob, filename, downloadSubfolder = '', showInFolder = false) {
   return new Promise((resolve, reject) => {
     try {
       // Create object URL for the blob
       const url = URL.createObjectURL(blob);
       
-      // Use Chrome Downloads API with Save As dialog
+      // Construct full filename with subfolder if specified
+      let fullFilename = filename;
+      if (downloadSubfolder) {
+        fullFilename = `${downloadSubfolder}/${filename}`;
+      }
+      
+      console.log('📥 Downloading with filename:', fullFilename);
+      
+      // Use Chrome Downloads API
       chrome.downloads.download({
         url: url,
-        filename: filename,
-        saveAs: true // Force "Save As" dialog for user to choose location
+        filename: fullFilename,
+        saveAs: showInFolder, // Only use Save As dialog if user wants to show in folder
+        conflictAction: 'uniquify' // Ensure unique filename if conflict
       }, (downloadId) => {
         // Clean up object URL
         URL.revokeObjectURL(url);
@@ -374,7 +382,13 @@ function downloadFile(blob, filename) {
         if (chrome.runtime.lastError) {
           reject(new Error(chrome.runtime.lastError.message));
         } else {
-          console.log(`📥 Download started: ${filename} (ID: ${downloadId})`);
+          console.log(`📥 Download started: ${fullFilename} (ID: ${downloadId})`);
+          
+          // Show in folder if requested
+          if (showInFolder) {
+            chrome.downloads.show(downloadId);
+          }
+          
           resolve(downloadId);
         }
       });
