@@ -201,7 +201,16 @@ async function processBatch(conversionData) {
       const outputName = generateOutputFilename(file.name, settings);
       
       // Trigger download
-      await downloadFile(processedBlob, outputName);
+      const downloadId = await downloadFile(processedBlob, outputName);
+      try {
+        const prefs = await chrome.storage.local.get(['userPreferences']);
+        const show = !!prefs?.userPreferences?.showInFolderAfterDownload;
+        if (show && downloadId) {
+          // Small delay to ensure the download item is registered
+          await new Promise(r => setTimeout(r, 300));
+          chrome.downloads.show(downloadId);
+        }
+      } catch {}
       
       // Track success
       const processedFile = {

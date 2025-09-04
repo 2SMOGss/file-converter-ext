@@ -43,47 +43,49 @@
     <section class="options-section" id="optionsSection" style="display: none;">
       <h4>Conversion Options</h4>
       
-      <!-- Format Selection -->
-      <div class="option-group">
-        <label for="outputFormat">Output Format:</label>
-        <select id="outputFormat">
-          <option value="jpeg">JPEG</option>
-          <option value="png">PNG</option>
-        </select>
-      </div>
+      <div class="options-grid">
+        <!-- Format Selection -->
+        <div class="option-group">
+          <label for="outputFormat">Output Format:</label>
+          <select id="outputFormat">
+            <option value="jpeg">JPEG</option>
+            <option value="png">PNG</option>
+          </select>
+        </div>
 
-      <!-- Size Options -->
-      <div class="option-group">
-        <label>Size Options:</label>
-        <div class="radio-group">
-          <label class="radio-label">
-            <input type="radio" name="sizeOption" value="original" checked>
-            Keep Original Size
-          </label>
-          <label class="radio-label">
-            <input type="radio" name="sizeOption" value="preset">
-            Professional Presets
-          </label>
-          <label class="radio-label">
-            <input type="radio" name="sizeOption" value="custom">
-            Custom Dimensions
-          </label>
+        <!-- Size Options -->
+        <div class="option-group">
+          <label>Size Options:</label>
+          <div class="radio-group">
+            <label class="radio-label">
+              <input type="radio" name="sizeOption" value="original" checked>
+              Keep Original Size
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="sizeOption" value="preset">
+              Professional Presets
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="sizeOption" value="custom">
+              Custom Dimensions
+            </label>
+          </div>
+        </div>
+
+        <!-- Preset Selection -->
+        <div class="option-group" id="presetGroup" style="display: none;">
+          <label for="presetSelect">Choose Preset:</label>
+          <select id="presetSelect">
+            <option value="print-quality">Print Quality (4500×5400)</option>
+            <option value="high-quality">High Quality (3000×3600)</option>
+            <option value="standard-print">Standard Print (2400×3000)</option>
+            <option value="web-preview">Web Preview (1800×2400)</option>
+          </select>
         </div>
       </div>
 
-      <!-- Preset Selection -->
-      <div class="option-group" id="presetGroup" style="display: none;">
-        <label for="presetSelect">Choose Preset:</label>
-        <select id="presetSelect">
-          <option value="print-quality">Print Quality (4500×5400)</option>
-          <option value="high-quality">High Quality (3000×3600)</option>
-          <option value="standard-print">Standard Print (2400×3000)</option>
-          <option value="web-preview">Web Preview (1800×2400)</option>
-        </select>
-      </div>
-
       <!-- Custom Dimensions -->
-      <div class="option-group" id="customGroup" style="display: none;">
+      <div class="option-group full-width" id="customGroup" style="display: none;">
         <div class="dimension-inputs">
           <div class="input-group">
             <label for="customWidth">Width:</label>
@@ -100,21 +102,36 @@
         </label>
       </div>
 
-      <!-- Quality Settings -->
-      <div class="option-group">
-        <label for="qualitySlider">Quality: <span id="qualityValue">80%</span></label>
-        <input type="range" id="qualitySlider" min="10" max="100" value="80" class="slider">
+      <div class="options-grid">
+        <!-- Quality Settings -->
+        <div class="option-group">
+          <label for="qualitySlider">Quality: <span id="qualityValue">80%</span></label>
+          <input type="range" id="qualitySlider" min="10" max="100" value="80" class="slider">
+        </div>
+
+        <!-- DPI Settings -->
+        <div class="option-group">
+          <label for="dpiSelect">DPI (Print Quality):</label>
+          <select id="dpiSelect">
+            <option value="72">72 DPI (Web)</option>
+            <option value="150">150 DPI (Good)</option>
+            <option value="300" selected>300 DPI (Print)</option>
+            <option value="600">600 DPI (High Print)</option>
+          </select>
+        </div>
       </div>
 
-      <!-- DPI Settings -->
-      <div class="option-group">
-        <label for="dpiSelect">DPI (Print Quality):</label>
-        <select id="dpiSelect">
-          <option value="72">72 DPI (Web)</option>
-          <option value="150">150 DPI (Good)</option>
-          <option value="300" selected>300 DPI (Print)</option>
-          <option value="600">600 DPI (High Print)</option>
-        </select>
+      <div class="options-grid">
+        <div class="option-group">
+          <label for="downloadSubfolder">Default subfolder under Downloads:</label>
+          <input type="text" id="downloadSubfolder" placeholder="File Converter Pro" />
+        </div>
+        <div class="option-group">
+          <label class="checkbox-label" style="margin-top: 26px; display: inline-flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="showInFolderAfterDownload" />
+            Show in folder after download
+          </label>
+        </div>
       </div>
     </section>
 

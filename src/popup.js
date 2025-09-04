@@ -88,6 +88,9 @@ function cacheDOMElements() {
     qualitySlider: document.getElementById('qualitySlider'),
     qualityValue: document.getElementById('qualityValue'),
     dpiSelect: document.getElementById('dpiSelect'),
+    // Download prefs
+    downloadSubfolder: document.getElementById('downloadSubfolder'),
+    showInFolderAfterDownload: document.getElementById('showInFolderAfterDownload'),
     
     // Actions
     actionsSection: document.getElementById('actionsSection'),
@@ -870,6 +873,14 @@ async function loadUserPreferences() {
         elements.presetSelect.value = prefs.selectedPrintPreset;
       }
       
+      // Download prefs
+      if (elements.downloadSubfolder && prefs.downloadSubfolder) {
+        elements.downloadSubfolder.value = prefs.downloadSubfolder;
+      }
+      if (elements.showInFolderAfterDownload && prefs.showInFolderAfterDownload !== undefined) {
+        elements.showInFolderAfterDownload.checked = !!prefs.showInFolderAfterDownload;
+      }
+
       updateConversionSettings();
     }
   } catch (error) {
@@ -887,7 +898,9 @@ async function saveUserPreferences() {
       defaultQuality: AppState.conversionSettings.quality,
       defaultDPI: AppState.conversionSettings.dpi,
       selectedPrintPreset: AppState.conversionSettings.preset,
-      maintainAspectRatio: AppState.conversionSettings.maintainAspectRatio
+      maintainAspectRatio: AppState.conversionSettings.maintainAspectRatio,
+      downloadSubfolder: elements.downloadSubfolder?.value?.trim() || 'File Converter Pro',
+      showInFolderAfterDownload: !!elements.showInFolderAfterDownload?.checked
     };
     
     await chrome.storage.local.set({ userPreferences: preferences });

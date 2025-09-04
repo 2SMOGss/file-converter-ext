@@ -100,6 +100,26 @@ async function handleGetSettings(sendResponse) {
 }
 
 /**
+ * Suggest subfolder for downloads
+ * Places files under Downloads/<downloadSubfolder>/<filename>
+ * Note: Extensions cannot target system Pictures directly; this is relative to the browser's Downloads dir
+ */
+chrome.downloads.onDeterminingFilename.addListener((item, suggest) => {
+  try {
+    chrome.storage.local.get(['userPreferences'], (res) => {
+      const userPreferences = res?.userPreferences || {};
+      const subfolder = userPreferences.downloadSubfolder || 'File Converter Pro';
+      // Preserve any existing subpath if present
+      const baseName = item.filename?.replace(/^.*[\\/]/, '') || 'converted-file';
+      suggest({ filename: `${subfolder}/${baseName}`, conflictAction: 'uniquify' });
+    });
+  } catch (e) {
+    // Fallback: keep original filename
+    suggest({ filename: item.filename, conflictAction: 'uniquify' });
+  }
+});
+
+/**
  * Handle setting update request
  */
 async function handleUpdateSetting(data, sendResponse) {
